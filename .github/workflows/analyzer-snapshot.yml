@@ -1,0 +1,29 @@
+name: Analyzer data
+
+on:
+  schedule:
+    - cron: "30 10 * * *"   # every day, about 6:30 a.m. Eastern
+    - cron: "30 22 * * *"   # and 6:30 p.m. Eastern
+    - cron: "30 16 * * 2,3" # plus midday Tue/Wed, when the week's charting usually lands
+  workflow_dispatch: {}     # "Run workflow" button for a manual update
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas numpy
+      - run: python build_snapshot.py
+      - run: python def_snapshot.py
+      - name: Save the new data file (only if it changed)
+        run: |
+          git config user.name "analyzer-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add analyzer_snapshot.json def_snapshot.json
+          git diff --cached --quiet || (git commit -m "Analyzer data $(date -u +%F)" && git push)
